@@ -1,0 +1,16 @@
+$kind: http-request
+name: ""
+url: http://localhost:5000/auth/register
+method: POST
+body:
+  type: json
+  content: " {\r
+
+    \    \"name\" :\" devendra sonaki\" ,\r
+
+    \    \"email\" : \"devendrasolanki@gmail.com\",\r
+
+    \    \"password \" : \" devendra123\"\r
+
+    \ }"
+order: 1000
