@@ -26,3 +26,11 @@ JWT_ACCESS_SECRET! , {
     expiresIn : "7d" ,
 })
 }
+
+
+export function verifyRefreshToken (token: string) {
+    return Jwt.verify(token , process.env.JWT_ACCESS_SECRET!) as {
+    sub : string ;
+    tokenVersion : number
+}
+}
