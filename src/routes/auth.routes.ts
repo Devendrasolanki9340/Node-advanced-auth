@@ -1,7 +1,7 @@
 
 
 import { Router } from "express";
-import { loginHandler, logouthHandler, refreshHandler, registerHandler, verifyEmailHandler } from "../controllers/auth/auth.controller";
+import { forgotPasswordHandler, loginHandler, logouthHandler, refreshHandler, registerHandler, resetPasswordHandler, verifyEmailHandler } from "../controllers/auth/auth.controller";
 
 
 const router = Router()
@@ -12,5 +12,7 @@ router.post('/login' , loginHandler)
 router.get('/verify-email' , verifyEmailHandler)
 router.post('/refresh' , refreshHandler)
 router.post('/logout' , logouthHandler)
+router.post('/forgot-password' , forgotPasswordHandler)
+router.post('/reset-password' , resetPasswordHandler )
 
 export default router
