@@ -15,6 +15,15 @@ JWT_ACCESS_SECRET! , {
 })
 }
 
+export function verifyAccessToken (token: string) {
+    return Jwt.verify(token , process.env.JWT_ACCESS_SECRET!) as {
+        sub : string;
+        role : 'user' | "admin" ;
+        tokenVersion : number ;
+}
+}
+
+
 export function createRefreshToken (
     userId :string ,
     tokenVersion : number
