@@ -9,6 +9,7 @@ import { sendEmail } from '../../lib/email';
 import { createAcessToken, createRefreshToken, verifyRefreshToken } from '../../lib/token';
 import crypto from "crypto"
 import {OAuth2Client} from "google-auth-library"
+import { generateSecret, generateURI, verify } from 'otplib'
 
 
 function getAppUrl (){
@@ -161,7 +162,8 @@ export async function loginHandler(req :Request , res: Response){
             return res.status(400).json({ message: 'Invalid  data', errors: result.error.flatten() });
         }
 
-         const { email, password } = result.data
+         const { email, password, twoFactorCode, code } = result.data
+         const loginTwoFactorCode = twoFactorCode ?? code
 
         const normalizedEmail = email.toLowerCase().trim();
 
@@ -179,6 +181,34 @@ export async function loginHandler(req :Request , res: Response){
 
         if(!user.isEmailVerified){
             return res.status(403).json({message: 'Please verify your email before logging in.'})
+        }
+
+        if(user.twoFactorEnabled){
+            if(!loginTwoFactorCode){
+                return res.status(400).json({
+                    message: 'Two factor code is required'
+                })
+            }
+
+            if(!user.twoFactorSecret){
+                return res.status(400).json({
+                    message: 'Two factor miscofigured for this accounr'
+                })
+            }
+
+            //  verify the code using otplib
+
+            const { valid: isValidCode } = await verify({
+                token: loginTwoFactorCode,
+                secret: user.twoFactorSecret,
+            })
+            if(!isValidCode){
+                return res.status(400).json({
+                    message: "Invalid two factor code"
+                })
+            }
+
+
         }
 
         const accessToken =  createAcessToken(
@@ -541,10 +571,122 @@ export async function googleAuthCallbackHandler(req :Request , res: Response){
             
         } catch (e) {
              console.log(e)
-     return res.status(500).json({
+             return res.status(500).json({
             message: "Internal googleAuthCallback server error"
         })
         }
 }    
     
 
+
+
+
+export async function twoFASetuphandler(req: Request, res: Response) {
+  const authReq = req as any;
+  const authUser = authReq.user;
+
+  if (!authUser) {
+    return res.status(401).json({
+      message: "Not authenticated",
+    });
+  }
+
+  try {
+    const user = await User.findById(authUser.id);
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    const secret = generateSecret();
+
+    const issuer = "NodeAdvancedAuthApp";
+
+    const otpAuthUrl = generateURI({
+      issuer,
+      label: user.email,
+      secret,
+    });
+
+    user.twoFactorSecret = secret;
+    user.twoFactorEnabled = false;
+
+    await user.save();
+
+    return res.json({
+      message: "2FA setup is done",
+      otpAuthUrl,
+      secret,
+    });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+}
+
+
+
+
+
+export async function twoFAVerifyHandler(req :Request , res: Response){
+
+    const authReq = req as any
+    const authUser = authReq.user 
+
+
+    if(!authUser){
+        return res.status(401).json({
+        message: 'Not authenticed'
+     })   
+    }
+
+    const {code} = req.body as {code?: string}
+
+    if(!code){
+        return res.status(400).json({
+        message: ' Two factor code is required'
+     })   
+    }
+
+    try {
+        
+         const user = await User.findById(authUser.id)
+
+        if(!user){
+        return res.status(404).json({
+        message: ' User not found'
+     })   
+    }
+    if(!user.twoFactorSecret){
+         return res.status(400).json({
+        message: ' You dont have 2fa setup yet'
+     })   
+    }
+
+        const { valid: isValid } = await verify({
+            token: code,
+            secret: user.twoFactorSecret,
+        })
+
+        if(!isValid){
+            return res.status(400).json({
+         message: ' Invalid two factor code'
+         }) 
+        }
+        user.twoFactorEnabled = true
+        await user.save()
+
+          return res.json({
+        message: ' 2fa enabled sucessfully'
+     }) 
+        
+    } catch (error) {
+         return res.status(500).json({
+            message: "Internal  twoFAVerify server error"
+        })
+        
+    }
+}

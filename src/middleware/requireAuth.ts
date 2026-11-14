@@ -9,12 +9,13 @@ import { User } from '../models/user.model'
 export async function requireAuth(req :Request , res: Response , next: NextFunction){
     
     const authHeader = req.headers.authorization
+    const token = authHeader?.match(/^Bearer\s+(\S+)$/i)?.[1]
 
-    if(!authHeader || !authHeader.startsWith("Bearer")){
-        return res.status(401).json({message: "You are not auth user! you can enter the bulding "})
+    if(!token){
+        return res.status(401).json({
+            message: "Authentication required. Send an Authorization: Bearer <accessToken> header.",
+        })
     }
-
-    const token = authHeader.split(" ")[1]
 
     try {
         const payload = verifyAccessToken(token)

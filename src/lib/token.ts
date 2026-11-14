@@ -11,7 +11,7 @@ export function createAcessToken (
 
     return Jwt.sign(payload , process.env.
 JWT_ACCESS_SECRET! , {
-    expiresIn : "30m" ,
+    expiresIn : "1d" ,
 })
 }
 
